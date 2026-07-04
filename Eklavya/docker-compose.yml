@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: eklavya
+      POSTGRES_PASSWORD: eklavya123
+      POSTGRES_DB: eklavya_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    ports:
+      - "10000:10000"
+    volumes:
+      - azurite_data:/data
+    command: azurite-blob --blobHost 0.0.0.0 --loose
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://eklavya:eklavya123@postgres:5432/eklavya_db
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
+      AZURE_CONTAINER_GALLERY: ${AZURE_CONTAINER_GALLERY:-gallery}
+      AZURE_CONTAINER_KIDS: ${AZURE_CONTAINER_KIDS:-kids}
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_URL: http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  azurite_data:
