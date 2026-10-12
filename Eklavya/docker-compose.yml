@@ -29,6 +29,16 @@ services:
       AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
       AZURE_CONTAINER_GALLERY: ${AZURE_CONTAINER_GALLERY:-gallery}
       AZURE_CONTAINER_KIDS: ${AZURE_CONTAINER_KIDS:-kids}
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@eklavyaart.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_NAME: ${ADMIN_NAME:-School Admin}
+      ADMIN_NOTIFICATION_EMAIL: ${ADMIN_NOTIFICATION_EMAIL:-admin@eklavyaart.com}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     depends_on:
       - postgres
     volumes:

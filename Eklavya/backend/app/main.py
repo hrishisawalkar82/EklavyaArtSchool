@@ -1,9 +1,25 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.db import engine, Base
-from app.routes import images, contact
 
-app = FastAPI(title="Eklavya Art School API")
+from app.db import Base, SessionLocal, engine
+from app.routes import auth, contact, images, payments
+from app.seed import seed_default_users
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        seed_default_users(db)
+    finally:
+        db.close()
+    yield
+
+
+app = FastAPI(title="Eklavya Art School API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -13,10 +29,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-Base.metadata.create_all(bind=engine)
-
 app.include_router(images.router, prefix="/api")
 app.include_router(contact.router, prefix="/api")
+app.include_router(auth.router, prefix="/api")
+app.include_router(payments.router, prefix="/api")
 
 @app.get("/")
 def root():

@@ -1,3 +1,195 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { createPayment, listMyPayments } from '../api/client'
+import { useAuth } from '../context/AuthContext'
+
+const PAYMENT_MODES = [
+  { value: 'venmo', label: 'Venmo' },
+  { value: 'bank_transfer', label: 'Bank transfer' },
+  { value: 'check', label: 'Check' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'other', label: 'Other' },
+]
+
+function ParentPaymentPortal() {
+  const { user, isParent } = useAuth()
+  const [entries, setEntries] = useState([])
+  const [loadingList, setLoadingList] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const [form, setForm] = useState({
+    student_name: '',
+    parent_name: user?.name || '',
+    amount: '',
+    payment_mode: 'venmo',
+  })
+
+  useEffect(() => {
+    if (user?.name) {
+      setForm((f) => ({ ...f, parent_name: f.parent_name || user.name }))
+    }
+  }, [user?.name])
+
+  const loadEntries = async () => {
+    setLoadingList(true)
+    try {
+      const res = await listMyPayments()
+      setEntries(res.data)
+    } catch {
+      setError('Could not load your payment entries.')
+    } finally {
+      setLoadingList(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isParent) loadEntries()
+  }, [isParent])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setMessage('')
+    setError('')
+    try {
+      await createPayment({
+        ...form,
+        amount: parseFloat(form.amount),
+      })
+      setMessage('Payment notification sent. Status is pending until the school confirms receipt.')
+      setForm((f) => ({ ...f, student_name: '', amount: '' }))
+      await loadEntries()
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Could not submit payment notification.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (!isParent) {
+    return (
+      <div className="container mx-auto px-4 -mt-8 relative z-10 max-w-4xl">
+        <div className="bg-white rounded-2xl shadow-lg border border-green-100 p-6 md:p-8">
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Notify us about your payment</h2>
+          <p className="text-gray-600 text-sm mb-4">
+            After you pay via Venmo or bank transfer, parents can log in and tell us the student name,
+            amount, and payment method. The school will mark it as received once confirmed.
+          </p>
+          <Link
+            to="/login/parent"
+            className="inline-flex px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700"
+          >
+            Parent login / register
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto px-4 -mt-8 relative z-10 max-w-4xl space-y-8">
+      <div className="bg-white rounded-2xl shadow-lg border border-green-100 p-6 md:p-8">
+        <h2 className="text-xl font-bold text-gray-800 mb-1">Submit planned payment</h2>
+        <p className="text-gray-600 text-sm mb-6">
+          Signed in as {user.email}. We&apos;ll email the admin and show status below.
+        </p>
+        <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Student name</label>
+            <input
+              required
+              value={form.student_name}
+              onChange={(e) => setForm({ ...form, student_name: e.target.value })}
+              className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Parent name</label>
+            <input
+              required
+              value={form.parent_name}
+              onChange={(e) => setForm({ ...form, parent_name: e.target.value })}
+              className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Amount (USD)</label>
+            <input
+              required
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={form.amount}
+              onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Payment mode</label>
+            <select
+              value={form.payment_mode}
+              onChange={(e) => setForm({ ...form, payment_mode: e.target.value })}
+              className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none bg-white"
+            >
+              {PAYMENT_MODES.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            {message && <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2 mb-3">{message}</p>}
+            {error && (
+              <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">
+                {typeof error === 'string' ? error : JSON.stringify(error)}
+              </p>
+            )}
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 disabled:opacity-60"
+            >
+              {submitting ? 'Sending…' : 'Notify school (pending)'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Your payment entries</h3>
+        {loadingList ? (
+          <p className="text-gray-500 text-sm">Loading…</p>
+        ) : entries.length === 0 ? (
+          <p className="text-gray-500 text-sm">No entries yet.</p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {entries.map((entry) => (
+              <li key={entry.id} className="py-4 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="font-medium text-gray-800">{entry.student_name}</p>
+                  <p className="text-sm text-gray-600">
+                    ${Number(entry.amount).toFixed(2)} · {entry.payment_mode.replace(/_/g, ' ')}
+                  </p>
+                  <p className="text-xs text-gray-400">{new Date(entry.created_at).toLocaleString()}</p>
+                </div>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    entry.status === 'received'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  {entry.status === 'received' ? 'Received' : 'Pending'}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function Payment() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -10,9 +202,11 @@ export default function Payment() {
             </svg>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Payment Information</h1>
-          <p className="text-green-100 text-lg">Choose your preferred payment method</p>
+          <p className="text-green-100 text-lg">Pay via Venmo or bank transfer, then notify the school</p>
         </div>
       </div>
+
+      <ParentPaymentPortal />
 
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto space-y-8">
@@ -149,9 +343,9 @@ export default function Payment() {
               <div>
                 <h3 className="font-semibold text-amber-900 mb-2">Important Note</h3>
                 <p className="text-sm text-amber-800">
-                  We do not process payments directly on this website. Please use the information above 
-                  to make payments via Venmo or bank transfer. Be sure to include your name and the 
-                  purpose of payment in the description.
+                  We do not process payments directly on this website. Use Venmo or bank transfer above,
+                  then log in as a parent to submit student name, amount, and payment mode. Entries stay
+                  pending until an admin marks them received.
                 </p>
               </div>
             </div>
