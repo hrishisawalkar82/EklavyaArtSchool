@@ -43,24 +43,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* Featured Artwork */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">Featured Artwork</h2>
-            <p className="text-slate-600 text-lg">Discover amazing creations from our talented artists</p>
-          </div>
-          <ImageGrid images={images} loading={loading} />
-          <div className="text-center mt-12">
-            <a href="/gallery" className="inline-block px-8 py-3 border-2 border-slate-900 text-slate-900 rounded-full font-semibold hover:bg-slate-900 hover:text-white transition">
-              View All Artwork →
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* Info Cards */}
+ {/* Info Cards */}
       <section className="py-20 bg-slate-50">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
@@ -100,6 +83,23 @@ At Eklavya Arts, we believe in the transformative power of art and are committed
           </div>
         </div>
       </section>
+      {/* Featured Artwork */}
+      <section className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">Featured Artwork</h2>
+            <p className="text-slate-600 text-lg">Discover amazing creations from our talented artists</p>
+          </div>
+          <ImageGrid images={images} loading={loading} />
+          <div className="text-center mt-12">
+            <a href="/gallery" className="inline-block px-8 py-3 border-2 border-slate-900 text-slate-900 rounded-full font-semibold hover:bg-slate-900 hover:text-white transition">
+              View All Artwork →
+            </a>
+          </div>
+        </div>
+      </section>
+
+     
 
       {/* Stats Section */}
       <section className="py-20 bg-blue-950">
