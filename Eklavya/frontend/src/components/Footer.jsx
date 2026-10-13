@@ -38,7 +38,7 @@ export default function Footer() {
         </div>
         
         <div className="border-t border-blue-900 mt-8 pt-8 text-center text-sm">
-          <p>&copy; {new Date().getFullYear()} Eklavya Art School. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} EklavyaArts. All Rights Reserved. Developed by Hrishikesh Sawalkar (hrishi.sawalkar@gmail.com).</p>
         </div>
       </div>
     </footer>
