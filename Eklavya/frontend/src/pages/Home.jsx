@@ -88,9 +88,13 @@ export default function Home() {
               </div>
               <h3 className="text-2xl font-bold mb-4 text-slate-900">About Our School</h3>
               <p className="text-slate-600 leading-relaxed">
-                Eklavya Art School is dedicated to fostering creativity and artistic expression
-                in a supportive environment. We offer classes for children and adults, focusing
-                on fundamental techniques while encouraging individual artistic vision.
+              Eklavya Arts was founded by Aparna Sawalkar in 2020. It is dedicated to nurturing creativity and artistic expression among young talents. We provide a platform for children and adults to explore and develop their artistic abilities through various programs and exhibitions.
+
+Our annual Kids’ Art Exhibition is a testament to the creativity and talent of our young artists. The showcase features over 150 artworks, highlighting the diverse skills and imaginative expressions of children aged 4 to 15.
+
+In our inaugural exhibition, approximately 20 young artists participated, presenting around 100 drawings and paintings. This event marked the beginning of our journey to inspire and celebrate the artistic endeavors of children in our community.
+
+At Eklavya Arts, we believe in the transformative power of art and are committed to providing opportunities for young artists to express themselves, develop their skills, and share their creations with the world.
               </p>
             </div>
           </div>
