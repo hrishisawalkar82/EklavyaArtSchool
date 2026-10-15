@@ -17,3 +17,6 @@ class PaymentSubmission(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     approved_at = Column(DateTime, nullable=True)
     approved_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    # Which assigned due this submission is paying for (if any) — lets admin
+    # approval automatically mark the due as paid.
+    due_id = Column(Integer, ForeignKey("payment_dues.id"), nullable=True, index=True)
