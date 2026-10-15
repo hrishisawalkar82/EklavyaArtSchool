@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { createPayment, listMyPayments, listMyStudents } from '../api/client'
+import { createPayment, listMyStudents } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 import { PageHeader, inputClass, labelClass, cardClass } from '../components/Theme'
 
@@ -14,8 +14,6 @@ const PAYMENT_MODES = [
 
 function ParentPaymentPortal() {
   const { user, isParent } = useAuth()
-  const [entries, setEntries] = useState([])
-  const [loadingList, setLoadingList] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -36,18 +34,6 @@ function ParentPaymentPortal() {
       setForm((f) => ({ ...f, parent_name: f.parent_name || user.name }))
     }
   }, [user?.name])
-
-  const loadEntries = async () => {
-    setLoadingList(true)
-    try {
-      const res = await listMyPayments()
-      setEntries(res.data)
-    } catch {
-      setError('Could not load your payment entries.')
-    } finally {
-      setLoadingList(false)
-    }
-  }
 
   const loadStudentDues = async () => {
     setLoadingDues(true)
@@ -78,7 +64,6 @@ function ParentPaymentPortal() {
 
   useEffect(() => {
     if (isParent) {
-      loadEntries()
       loadStudentDues()
     }
   }, [isParent])
@@ -89,7 +74,6 @@ function ParentPaymentPortal() {
     if (!isParent) return undefined
     const interval = setInterval(() => {
       loadStudentDues()
-      loadEntries()
     }, 15000)
     return () => clearInterval(interval)
   }, [isParent])
@@ -108,7 +92,6 @@ function ParentPaymentPortal() {
       setMessage('Payment notification sent. Status is pending until the school confirms receipt.')
       setForm((f) => ({ ...f, student_name: '', amount: '' }))
       setActiveDueId(null)
-      await loadEntries()
       await loadStudentDues()
     } catch (err) {
       setError(err.response?.data?.detail || 'Could not submit payment notification.')
@@ -217,38 +200,6 @@ function ParentPaymentPortal() {
       )}
 
       <div className={`${cardClass} shadow-lg p-6 md:p-8`}>
-        <h3 className="font-display text-lg font-bold text-ink mb-4">Your payment entries</h3>
-        {loadingList ? (
-          <p className="text-ink/50 text-sm">Loading…</p>
-        ) : entries.length === 0 ? (
-          <p className="text-ink/50 text-sm">No entries yet.</p>
-        ) : (
-          <ul className="divide-y divide-ink/5">
-            {entries.map((entry) => (
-              <li key={entry.id} className="py-4 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="font-medium text-ink">{entry.student_name}</p>
-                  <p className="text-sm text-ink/60">
-                    ${Number(entry.amount).toFixed(2)} · {entry.payment_mode.replace(/_/g, ' ')}
-                  </p>
-                  <p className="text-xs text-ink/40">{new Date(entry.created_at).toLocaleString()}</p>
-                </div>
-                <span
-                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    entry.status === 'received'
-                      ? 'bg-paint-teal/15 text-ink'
-                      : 'bg-paint-marigold/20 text-ink'
-                  }`}
-                >
-                  {entry.status === 'received' ? 'Received' : 'Pending'}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      <div className={`${cardClass} shadow-lg p-6 md:p-8`}>
         <div className="flex flex-wrap items-center justify-between gap-3 mb-1">
           <h3 className="font-display text-lg font-bold text-ink">My students & payment due</h3>
           <div className="flex items-center gap-4">
@@ -269,7 +220,8 @@ function ParentPaymentPortal() {
           </div>
         </div>
         <p className="text-ink/60 text-sm mb-6">
-          Students linked to your account and the amounts the school has assigned to each.
+          Students linked to your account, the amounts the school has assigned to each, and the
+          payment you submitted for each due.
         </p>
 
         {loadingDues ? (
@@ -311,11 +263,29 @@ function ParentPaymentPortal() {
                               ? `Due ${new Date(due.due_date).toLocaleDateString()}`
                               : 'No due date'}
                           </p>
+                          {due.payment_mode && (
+                            <p className="text-xs text-ink/60 mt-1">
+                              Payment type:{' '}
+                              <span className="font-semibold text-ink">
+                                {due.payment_mode.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                              </span>
+                            </p>
+                          )}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                           <span className="font-semibold text-ink">
                             ${Number(due.amount).toFixed(2)}
                           </span>
+                          {due.payment_status === 'received' && (
+                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-paint-teal/15 text-ink">
+                              Received
+                            </span>
+                          )}
+                          {due.payment_status === 'pending' && (
+                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-paint-sky/15 text-ink">
+                              Submitted
+                            </span>
+                          )}
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-semibold ${
                               due.status === 'paid'

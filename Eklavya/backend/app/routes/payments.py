@@ -55,6 +55,7 @@ def create_payment(
         amount=body.amount,
         payment_mode=body.payment_mode,
         status="pending",
+        due_id=body.due_id,
     )
     db.add(payment)
     db.commit()
@@ -117,6 +118,16 @@ def approve_payment(
     payment.approved_at = datetime.utcnow()
     payment.approved_by_id = admin.id
     payment.updated_at = datetime.utcnow()
+
+    # If this submission pays off an assigned due, mark that due as paid so the
+    # parent's "payment entries" (Received) and "payment due" (Paid) views agree.
+    if payment.due_id is not None:
+        due = db.query(PaymentDue).filter(PaymentDue.id == payment.due_id).first()
+        if due and due.status != "paid":
+            due.status = "paid"
+            due.paid_at = datetime.utcnow()
+            due.updated_at = datetime.utcnow()
+
     db.commit()
     db.refresh(payment)
     return payment

@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import require_admin, require_parent
 from app.db import get_db
+from app.models.payment import PaymentSubmission
 from app.models.payment_due import PaymentDue
 from app.models.student import Student
 from app.models.user import User
@@ -64,6 +65,9 @@ class PaymentDueOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     paid_at: Optional[datetime] = None
+    # Latest payment submission made against this due (if any)
+    payment_mode: Optional[str] = None
+    payment_status: Optional[str] = None  # pending | received
 
     class Config:
         from_attributes = True
@@ -94,6 +98,12 @@ def _student_out(student: Student, db: Session) -> StudentOut:
 
 def _due_out(due: PaymentDue, db: Session) -> PaymentDueOut:
     student = db.query(Student).filter(Student.id == due.student_id).first()
+    submission = (
+        db.query(PaymentSubmission)
+        .filter(PaymentSubmission.due_id == due.id)
+        .order_by(PaymentSubmission.created_at.desc())
+        .first()
+    )
     return PaymentDueOut(
         id=due.id,
         student_id=due.student_id,
@@ -106,6 +116,8 @@ def _due_out(due: PaymentDue, db: Session) -> PaymentDueOut:
         created_at=due.created_at,
         updated_at=due.updated_at,
         paid_at=due.paid_at,
+        payment_mode=submission.payment_mode if submission else None,
+        payment_status=submission.status if submission else None,
     )
 
 
