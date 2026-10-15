@@ -18,7 +18,8 @@ router = APIRouter()
 # ---------- Schemas ----------
 
 class StudentCreate(BaseModel):
-    student_code: str = Field(..., min_length=1, max_length=50)
+    # Optional — if omitted, the backend auto-generates a unique code (e.g. STU-0001)
+    student_code: Optional[str] = Field(None, min_length=1, max_length=50)
     name: str = Field(..., min_length=1, max_length=100)
     parent_user_id: int
 
@@ -122,16 +123,45 @@ def list_parents(_: User = Depends(require_admin), db: Session = Depends(get_db)
 
 # ---------- Students (admin) ----------
 
+STUDENT_CODE_PREFIX = "STU-"
+
+
+def _generate_student_code(db: Session) -> str:
+    """Auto-generate the next unique student code, e.g. STU-0001, STU-0002, ..."""
+    existing_codes = (
+        db.query(Student.student_code)
+        .filter(Student.student_code.like(f"{STUDENT_CODE_PREFIX}%"))
+        .order_by(Student.id.desc())
+        .all()
+    )
+    max_num = 0
+    for (code,) in existing_codes:
+        suffix = code[len(STUDENT_CODE_PREFIX):]
+        if suffix.isdigit():
+            max_num = int(suffix)
+            break  # ordered by newest first, so the first numeric suffix is the highest
+
+    while True:
+        candidate = f"{STUDENT_CODE_PREFIX}{max_num + 1:04d}"
+        taken = db.query(Student).filter(Student.student_code == candidate).first()
+        if not taken:
+            return candidate
+        max_num += 1
+
+
 @router.post("/students", response_model=StudentOut, status_code=status.HTTP_201_CREATED)
 def create_student(
     body: StudentCreate,
     _: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    code = body.student_code.strip()
-    existing = db.query(Student).filter(Student.student_code == code).first()
-    if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Student ID already exists")
+    if body.student_code and body.student_code.strip():
+        code = body.student_code.strip()
+        existing = db.query(Student).filter(Student.student_code == code).first()
+        if existing:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Student ID already exists")
+    else:
+        code = _generate_student_code(db)
 
     parent = db.query(User).filter(User.id == body.parent_user_id, User.role == "parent").first()
     if not parent:

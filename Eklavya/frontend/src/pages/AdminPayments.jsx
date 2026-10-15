@@ -11,13 +11,14 @@ import {
   updatePaymentDue,
   deletePaymentDue,
 } from '../api/client'
+import { PageHeader, inputClass, labelClass } from '../components/Theme'
 
 function StatusBadge({ status }) {
   const received = status === 'received'
   return (
     <span
       className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
-        received ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+        received ? 'bg-paint-teal/15 text-ink' : 'bg-paint-marigold/20 text-ink'
       }`}
     >
       {received ? 'Received' : 'Pending'}
@@ -28,10 +29,10 @@ function StatusBadge({ status }) {
 function DueBadge({ status }) {
   const styles =
     status === 'paid'
-      ? 'bg-green-100 text-green-800'
+      ? 'bg-paint-teal/15 text-ink'
       : status === 'waiting_confirmation'
-      ? 'bg-amber-100 text-amber-800'
-      : 'bg-rose-100 text-rose-800'
+      ? 'bg-paint-marigold/20 text-ink'
+      : 'bg-paint-coral/15 text-ink'
   const label =
     status === 'paid'
       ? 'Paid'
@@ -54,23 +55,25 @@ function formatDate(value) {
   return new Date(value).toLocaleDateString()
 }
 
-const inputClass =
-  'w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-slate-500 outline-none'
-const labelClass = 'block text-sm font-medium text-gray-700 mb-1'
+const tabClass = (active) =>
+  `px-4 py-2 rounded-xl text-sm font-bold transition ${
+    active ? 'bg-ink text-paper' : 'bg-white border border-ink/10 text-ink/70 hover:border-ink/40'
+  }`
+
+const actionButtonClass =
+  'px-3 py-1.5 rounded-lg text-xs font-bold transition disabled:opacity-50'
 
 export default function AdminPayments() {
   const [tab, setTab] = useState('approvals')
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white py-12">
-        <div className="container mx-auto px-4">
-          <h1 className="text-3xl font-bold">Admin dashboard</h1>
-          <p className="text-slate-300 mt-2">
-            Manage students, assign payment dues, and approve parent notifications.
-          </p>
-        </div>
-      </div>
+    <div className="min-h-screen bg-paper">
+      <PageHeader
+        eyebrow="Studio management"
+        eyebrowColor="text-paint-violet"
+        title="Admin Dashboard"
+        subtitle="Manage students, assign payment dues, and approve parent notifications."
+      />
 
       <div className="container mx-auto px-4 py-10 max-w-5xl">
         <div className="flex flex-wrap gap-2 mb-6">
@@ -79,14 +82,7 @@ export default function AdminPayments() {
             { id: 'students', label: 'Students' },
             { id: 'dues', label: 'Payment dues' },
           ].map(({ id, label }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setTab(id)}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
-                tab === id ? 'bg-slate-800 text-white' : 'bg-white border border-gray-200 text-gray-700'
-              }`}
-            >
+            <button key={id} type="button" onClick={() => setTab(id)} className={tabClass(tab === id)}>
               {label}
             </button>
           ))}
@@ -145,32 +141,25 @@ function ApprovalsTab() {
           { id: 'pending', label: 'Pending' },
           { id: 'received', label: 'Received' },
         ].map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setFilter(id)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
-              filter === id ? 'bg-slate-800 text-white' : 'bg-white border border-gray-200 text-gray-700'
-            }`}
-          >
+          <button key={id} type="button" onClick={() => setFilter(id)} className={tabClass(filter === id)}>
             {label}
           </button>
         ))}
       </div>
 
       {error && (
-        <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</p>
+        <p className="mb-4 text-sm text-paint-coral bg-paint-coral/10 border border-paint-coral/20 rounded-lg px-3 py-2">{error}</p>
       )}
 
       {loading ? (
-        <p className="text-gray-600">Loading…</p>
+        <p className="text-ink/60">Loading…</p>
       ) : payments.length === 0 ? (
-        <p className="text-gray-600 bg-white rounded-2xl shadow p-8 text-center">No payment entries yet.</p>
+        <p className="text-ink/60 bg-white rounded-2xl shadow-sm border border-ink/5 p-8 text-center">No payment entries yet.</p>
       ) : (
-        <div className="bg-white rounded-2xl shadow overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-sm border border-ink/5 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
+              <thead className="bg-paper text-ink/50 uppercase text-xs">
                 <tr>
                   <th className="px-4 py-3">Student</th>
                   <th className="px-4 py-3">Parent</th>
@@ -181,17 +170,17 @@ function ApprovalsTab() {
                   <th className="px-4 py-3">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-ink/5">
                 {payments.map((p) => (
-                  <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-800">{p.student_name}</td>
-                    <td className="px-4 py-3 text-gray-700">{p.parent_name}</td>
+                  <tr key={p.id} className="hover:bg-paper/60">
+                    <td className="px-4 py-3 font-medium text-ink">{p.student_name}</td>
+                    <td className="px-4 py-3 text-ink/70">{p.parent_name}</td>
                     <td className="px-4 py-3">${Number(p.amount).toFixed(2)}</td>
                     <td className="px-4 py-3">{formatMode(p.payment_mode)}</td>
                     <td className="px-4 py-3">
                       <StatusBadge status={p.status} />
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-ink/50">
                       {new Date(p.created_at).toLocaleString()}
                     </td>
                     <td className="px-4 py-3">
@@ -200,12 +189,12 @@ function ApprovalsTab() {
                           type="button"
                           disabled={actionId === p.id}
                           onClick={() => handleApprove(p.id)}
-                          className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 disabled:opacity-50"
+                          className={`${actionButtonClass} bg-ink text-paper hover:bg-paint-teal`}
                         >
                           {actionId === p.id ? '…' : 'Mark received'}
                         </button>
                       ) : (
-                        <span className="text-gray-400 text-xs">—</span>
+                        <span className="text-ink/30 text-xs">—</span>
                       )}
                     </td>
                   </tr>
@@ -226,7 +215,7 @@ function StudentsTab() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const [form, setForm] = useState({ student_code: '', name: '', parent_user_id: '' })
+  const [form, setForm] = useState({ name: '', parent_user_id: '' })
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -252,13 +241,12 @@ function StudentsTab() {
     setError('')
     setMessage('')
     try {
-      await createStudent({
-        student_code: form.student_code.trim(),
+      const res = await createStudent({
         name: form.name.trim(),
         parent_user_id: Number(form.parent_user_id),
       })
-      setMessage('Student added.')
-      setForm({ student_code: '', name: '', parent_user_id: '' })
+      setMessage(`Student added with ID ${res.data.student_code}.`)
+      setForm({ name: '', parent_user_id: '' })
       await load()
     } catch (err) {
       setError(err.response?.data?.detail || 'Could not add student.')
@@ -279,19 +267,9 @@ function StudentsTab() {
 
   return (
     <div className="space-y-8">
-      <div className="bg-white rounded-2xl shadow p-6 md:p-8">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Add student</h2>
-        <form onSubmit={handleSubmit} className="grid md:grid-cols-3 gap-4">
-          <div>
-            <label className={labelClass}>Student ID</label>
-            <input
-              required
-              value={form.student_code}
-              onChange={(e) => setForm({ ...form, student_code: e.target.value })}
-              placeholder="e.g. STU-1002"
-              className={inputClass}
-            />
-          </div>
+      <div className="bg-white rounded-2xl shadow-sm border border-ink/5 p-6 md:p-8">
+        <h2 className="font-display text-lg font-bold text-ink mb-4">Add student</h2>
+        <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>Student name</label>
             <input
@@ -319,13 +297,13 @@ function StudentsTab() {
               ))}
             </select>
           </div>
-          <div className="md:col-span-3">
-            {message && <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2 mb-3">{message}</p>}
-            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{error}</p>}
+          <div className="md:col-span-2">
+            {message && <p className="text-sm text-ink bg-paint-teal/10 rounded-lg px-3 py-2 mb-3">{message}</p>}
+            {error && <p className="text-sm text-paint-coral bg-paint-coral/10 rounded-lg px-3 py-2 mb-3">{error}</p>}
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-3 bg-slate-800 text-white rounded-xl font-semibold hover:bg-slate-900 disabled:opacity-60"
+              className="px-6 py-3 bg-ink text-paper rounded-xl font-bold hover:bg-paint-coral transition-all duration-300 disabled:opacity-60 shadow-sm"
             >
               {submitting ? 'Saving…' : 'Add student'}
             </button>
@@ -333,15 +311,15 @@ function StudentsTab() {
         </form>
       </div>
 
-      <div className="bg-white rounded-2xl shadow overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-ink/5 overflow-hidden">
         {loading ? (
-          <p className="p-8 text-gray-600">Loading…</p>
+          <p className="p-8 text-ink/60">Loading…</p>
         ) : students.length === 0 ? (
-          <p className="p-8 text-gray-600 text-center">No students yet.</p>
+          <p className="p-8 text-ink/60 text-center">No students yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
+              <thead className="bg-paper text-ink/50 uppercase text-xs">
                 <tr>
                   <th className="px-4 py-3">Student ID</th>
                   <th className="px-4 py-3">Name</th>
@@ -350,18 +328,18 @@ function StudentsTab() {
                   <th className="px-4 py-3">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-ink/5">
                 {students.map((s) => (
-                  <tr key={s.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 font-mono font-medium text-gray-800">{s.student_code}</td>
-                    <td className="px-4 py-3 text-gray-800">{s.name}</td>
-                    <td className="px-4 py-3 text-gray-700">{s.parent_name || '—'}</td>
-                    <td className="px-4 py-3 text-gray-500">{formatDate(s.created_at)}</td>
+                  <tr key={s.id} className="hover:bg-paper/60">
+                    <td className="px-4 py-3 font-mono font-medium text-ink">{s.student_code}</td>
+                    <td className="px-4 py-3 text-ink">{s.name}</td>
+                    <td className="px-4 py-3 text-ink/70">{s.parent_name || '—'}</td>
+                    <td className="px-4 py-3 text-ink/50">{formatDate(s.created_at)}</td>
                     <td className="px-4 py-3">
                       <button
                         type="button"
                         onClick={() => handleDelete(s.id)}
-                        className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100"
+                        className={`${actionButtonClass} bg-paint-coral/10 text-paint-coral hover:bg-paint-coral hover:text-white`}
                       >
                         Delete
                       </button>
@@ -447,8 +425,8 @@ function DuesTab() {
 
   return (
     <div className="space-y-8">
-      <div className="bg-white rounded-2xl shadow p-6 md:p-8">
-        <h2 className="text-lg font-bold text-gray-800 mb-4">Add payment due</h2>
+      <div className="bg-white rounded-2xl shadow-sm border border-ink/5 p-6 md:p-8">
+        <h2 className="font-display text-lg font-bold text-ink mb-4">Add payment due</h2>
         <form onSubmit={handleSubmit} className="grid md:grid-cols-4 gap-4">
           <div>
             <label className={labelClass}>Student</label>
@@ -500,12 +478,12 @@ function DuesTab() {
             />
           </div>
           <div className="md:col-span-4">
-            {message && <p className="text-sm text-green-700 bg-green-50 rounded-lg px-3 py-2 mb-3">{message}</p>}
-            {error && <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2 mb-3">{error}</p>}
+            {message && <p className="text-sm text-ink bg-paint-teal/10 rounded-lg px-3 py-2 mb-3">{message}</p>}
+            {error && <p className="text-sm text-paint-coral bg-paint-coral/10 rounded-lg px-3 py-2 mb-3">{error}</p>}
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-3 bg-slate-800 text-white rounded-xl font-semibold hover:bg-slate-900 disabled:opacity-60"
+              className="px-6 py-3 bg-ink text-paper rounded-xl font-bold hover:bg-paint-coral transition-all duration-300 disabled:opacity-60 shadow-sm"
             >
               {submitting ? 'Saving…' : 'Add payment due'}
             </button>
@@ -513,15 +491,15 @@ function DuesTab() {
         </form>
       </div>
 
-      <div className="bg-white rounded-2xl shadow overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-ink/5 overflow-hidden">
         {loading ? (
-          <p className="p-8 text-gray-600">Loading…</p>
+          <p className="p-8 text-ink/60">Loading…</p>
         ) : dues.length === 0 ? (
-          <p className="p-8 text-gray-600 text-center">No payment dues yet.</p>
+          <p className="p-8 text-ink/60 text-center">No payment dues yet.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
+              <thead className="bg-paper text-ink/50 uppercase text-xs">
                 <tr>
                   <th className="px-4 py-3">Student</th>
                   <th className="px-4 py-3">Title</th>
@@ -531,16 +509,16 @@ function DuesTab() {
                   <th className="px-4 py-3">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-ink/5">
                 {dues.map((d) => (
-                  <tr key={d.id} className="hover:bg-gray-50">
+                  <tr key={d.id} className="hover:bg-paper/60">
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-800">{d.student_name || '—'}</p>
-                      <p className="text-xs text-gray-400 font-mono">{d.student_code}</p>
+                      <p className="font-medium text-ink">{d.student_name || '—'}</p>
+                      <p className="text-xs text-ink/40 font-mono">{d.student_code}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-700">{d.title}</td>
+                    <td className="px-4 py-3 text-ink/70">{d.title}</td>
                     <td className="px-4 py-3">${Number(d.amount).toFixed(2)}</td>
-                    <td className="px-4 py-3 text-gray-500">{formatDate(d.due_date)}</td>
+                    <td className="px-4 py-3 text-ink/50">{formatDate(d.due_date)}</td>
                     <td className="px-4 py-3">
                       <DueBadge status={d.status} />
                     </td>
@@ -550,7 +528,7 @@ function DuesTab() {
                           <button
                             type="button"
                             onClick={() => setStatus(d, 'paid')}
-                            className="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-semibold hover:bg-green-100"
+                            className={`${actionButtonClass} bg-paint-teal/10 text-ink hover:bg-paint-teal hover:text-white`}
                           >
                             {d.status === 'waiting_confirmation' ? 'Confirm paid' : 'Mark paid'}
                           </button>
@@ -559,7 +537,7 @@ function DuesTab() {
                           <button
                             type="button"
                             onClick={() => setStatus(d, 'due')}
-                            className="px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-100"
+                            className={`${actionButtonClass} bg-paint-marigold/20 text-ink hover:bg-paint-marigold`}
                           >
                             Mark due
                           </button>
@@ -567,7 +545,7 @@ function DuesTab() {
                         <button
                           type="button"
                           onClick={() => handleDelete(d.id)}
-                          className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-100"
+                          className={`${actionButtonClass} bg-paint-coral/10 text-paint-coral hover:bg-paint-coral hover:text-white`}
                         >
                           Delete
                         </button>

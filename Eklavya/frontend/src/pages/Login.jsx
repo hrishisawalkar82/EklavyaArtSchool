@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { loginAdmin, loginParent, registerParent } from '../api/client'
 import { useAuth } from '../context/AuthContext'
+import { Blob, inputClass, labelClass } from '../components/Theme'
 
 export default function Login({ mode = 'parent' }) {
   const isAdmin = mode === 'admin'
@@ -39,25 +40,27 @@ export default function Login({ mode = 'parent' }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-16">
-      <div className="container mx-auto px-4 max-w-md">
-        <div className="bg-white rounded-3xl shadow-xl p-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+    <div className="relative min-h-screen bg-paper py-16 overflow-hidden">
+      <Blob color="#2EC4B6" className="top-[-6rem] right-[-5rem] w-[22rem] h-[22rem]" />
+      <Blob color="#F7B32B" className="bottom-[-8rem] left-[-6rem] w-[24rem] h-[24rem]" />
+      <div className="container mx-auto px-4 max-w-md relative z-10">
+        <div className="bg-white rounded-[2rem] shadow-xl border border-ink/5 p-8">
+          <h1 className="font-display text-2xl font-bold text-ink mb-2">
             {isAdmin ? 'Admin Login' : registerMode ? 'Parent Registration' : 'Parent Login'}
           </h1>
-          <p className="text-gray-600 text-sm mb-6">
+          <p className="text-ink/60 text-sm mb-6">
             {isAdmin
               ? 'Review and approve payment notifications from parents.'
               : 'Log in to notify the school about a payment you plan to send.'}
           </p>
 
           {!isAdmin && (
-            <div className="flex gap-2 mb-6 p-1 bg-gray-100 rounded-xl">
+            <div className="flex gap-2 mb-6 p-1 bg-paper rounded-xl">
               <button
                 type="button"
                 onClick={() => setRegisterMode(false)}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
-                  !registerMode ? 'bg-white shadow text-gray-800' : 'text-gray-600'
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${
+                  !registerMode ? 'bg-white shadow text-ink' : 'text-ink/50'
                 }`}
               >
                 Sign in
@@ -65,8 +68,8 @@ export default function Login({ mode = 'parent' }) {
               <button
                 type="button"
                 onClick={() => setRegisterMode(true)}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${
-                  registerMode ? 'bg-white shadow text-gray-800' : 'text-gray-600'
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition ${
+                  registerMode ? 'bg-white shadow text-ink' : 'text-ink/50'
                 }`}
               >
                 Register
@@ -77,40 +80,40 @@ export default function Login({ mode = 'parent' }) {
           <form onSubmit={handleSubmit} className="space-y-4">
             {registerMode && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Your name</label>
+                <label className={labelClass}>Your name</label>
                 <input
                   type="text"
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                  className={inputClass}
                 />
               </div>
             )}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <label className={labelClass}>Email</label>
               <input
                 type="email"
                 required
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                className={inputClass}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label className={labelClass}>Password</label>
               <input
                 type="password"
                 required
                 minLength={registerMode ? 6 : undefined}
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
-                className="w-full border border-gray-300 rounded-xl px-4 py-2 focus:ring-2 focus:ring-green-500 outline-none"
+                className={inputClass}
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <p className="text-sm text-paint-coral bg-paint-coral/10 border border-paint-coral/20 rounded-lg px-3 py-2">
                 {typeof error === 'string' ? error : JSON.stringify(error)}
               </p>
             )}
@@ -118,19 +121,19 @@ export default function Login({ mode = 'parent' }) {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:shadow-lg disabled:opacity-60"
+              className="w-full py-3 bg-ink text-paper rounded-xl font-bold hover:bg-paint-coral transition-all duration-300 disabled:opacity-60 shadow-sm"
             >
               {loading ? 'Please wait…' : registerMode ? 'Create account' : 'Sign in'}
             </button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600">
+          <div className="mt-6 text-center text-sm text-ink/60">
             {isAdmin ? (
-              <Link to="/login/parent" className="text-green-700 font-medium hover:underline">
+              <Link to="/login/parent" className="text-paint-violet font-bold hover:underline">
                 Parent login instead
               </Link>
             ) : (
-              <Link to="/login/admin" className="text-green-700 font-medium hover:underline">
+              <Link to="/login/admin" className="text-paint-violet font-bold hover:underline">
                 Admin login
               </Link>
             )}
