@@ -6,6 +6,7 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 env:
   AZURE_WEBAPP_NAME: eklavya-staging
@@ -35,7 +36,7 @@ jobs:
           cache: 'pip'
           cache-dependency-path: Eklavya/backend/requirements.txt
 
-      - name: Install frontend dependencies
+      - name: Build frontend
         run: |
           cd ${{ env.FRONTEND_DIR }}
           npm ci
@@ -48,24 +49,23 @@ jobs:
 
       - name: Create deployment package
         run: |
-          mkdir -p ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-          cp -r ${{ env.BACKEND_DIR }}/* ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/
-          cp -r ${{ env.FRONTEND_DIR }}/dist ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/frontend/
-          cp ${{ env.BACKEND_DIR }}/Dockerfile ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/
-          cp ${{ env.BACKEND_DIR }}/requirements.txt ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/
+          mkdir -p ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/frontend
+          cp -r ${{ env.BACKEND_DIR }}/. ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/
+          cp -r ${{ env.FRONTEND_DIR }}/dist/. ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/frontend/
 
       - name: Login to Azure
+        if: github.event_name != 'pull_request'
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_STAGING }}
 
       - name: Deploy to Azure Web App (Staging)
+        if: github.event_name != 'pull_request'
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
-          images: 'python:3.11-slim'
-          start-up-command: 'bash start.sh'
+          startup-command: 'bash start.sh'
 
       - name: Upload deployment package artifact
         if: github.ref == 'refs/heads/develop'
