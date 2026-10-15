@@ -7,6 +7,11 @@ from app.models.user import User
 
 
 def seed_default_users(db: Session) -> None:
+    """Ensure the default admin account exists.
+
+    All other data (students, payment dues, payment submissions, contacts)
+    starts empty. Parents self-register via the parent login/register flow.
+    """
     admin_email = os.getenv("ADMIN_EMAIL", "admin@eklavyaart.com")
     admin_password = os.getenv("ADMIN_PASSWORD", "admin123")
     admin_name = os.getenv("ADMIN_NAME", "School Admin")

@@ -10,6 +10,7 @@ from app.auth import require_admin, require_parent
 from app.db import get_db
 from app.email_service import notify_admin_new_payment
 from app.models.payment import PaymentSubmission
+from app.models.payment_due import PaymentDue
 from app.models.user import User
 
 router = APIRouter()
@@ -23,6 +24,7 @@ class PaymentCreate(BaseModel):
     parent_name: str = Field(..., min_length=1, max_length=100)
     amount: Decimal = Field(..., gt=0)
     payment_mode: PaymentMode
+    due_id: Optional[int] = None
 
 
 class PaymentOut(BaseModel):
@@ -65,6 +67,15 @@ def create_payment(
         payment_mode=payment.payment_mode,
         submission_id=payment.id,
     )
+
+    # If this notification is for a specific assigned due, move it to
+    # "waiting for confirmation" until an admin marks it received/paid.
+    if body.due_id is not None:
+        due = db.query(PaymentDue).filter(PaymentDue.id == body.due_id).first()
+        if due and due.status == "due":
+            due.status = "waiting_confirmation"
+            due.updated_at = datetime.utcnow()
+            db.commit()
 
     return payment
 

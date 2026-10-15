@@ -1,10 +1,11 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import Base, SessionLocal, engine
-from app.routes import auth, contact, images, payments
+from app.routes import auth, contact, images, payments, students
 from app.seed import seed_default_users
 
 
@@ -18,6 +19,12 @@ async def lifespan(app: FastAPI):
         db.close()
     yield
 
+
+# Make app/email-service logging visible in `docker logs` (INFO and above).
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 app = FastAPI(title="Eklavya Art School API", lifespan=lifespan)
 
@@ -33,6 +40,7 @@ app.include_router(images.router, prefix="/api")
 app.include_router(contact.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
+app.include_router(students.router, prefix="/api")
 
 @app.get("/")
 def root():

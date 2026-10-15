@@ -56,3 +56,35 @@ export const listAllPayments = (params = {}) =>
 
 export const approvePayment = (id) =>
   api.patch(`/payments/${id}/approve`)
+
+// Students & payment dues (admin)
+export const listParents = () =>
+  api.get('/parents')
+
+export const listStudents = () =>
+  api.get('/students')
+
+export const createStudent = (data) =>
+  api.post('/students', data)
+
+export const updateStudent = (id, data) =>
+  api.patch(`/students/${id}`, data)
+
+export const deleteStudent = (id) =>
+  api.delete(`/students/${id}`)
+
+export const listPaymentDues = () =>
+  api.get('/payment-dues')
+
+export const createPaymentDue = (data) =>
+  api.post('/payment-dues', data)
+
+export const updatePaymentDue = (id, data) =>
+  api.patch(`/payment-dues/${id}`, data)
+
+export const deletePaymentDue = (id) =>
+  api.delete(`/payment-dues/${id}`)
+
+// Parent view
+export const listMyStudents = () =>
+  api.get('/students/mine')

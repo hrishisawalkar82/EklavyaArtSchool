@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { createPayment, listMyPayments } from '../api/client'
+import { createPayment, listMyPayments, listMyStudents } from '../api/client'
 import { useAuth } from '../context/AuthContext'
 
 const PAYMENT_MODES = [
@@ -24,6 +24,11 @@ function ParentPaymentPortal() {
     amount: '',
     payment_mode: 'venmo',
   })
+  const [studentDues, setStudentDues] = useState([])
+  const [loadingDues, setLoadingDues] = useState(false)
+  const [showSubmitForm, setShowSubmitForm] = useState(false)
+  const [activeDueId, setActiveDueId] = useState(null)
+  const submitFormRef = useRef(null)
 
   useEffect(() => {
     if (user?.name) {
@@ -43,8 +48,49 @@ function ParentPaymentPortal() {
     }
   }
 
+  const loadStudentDues = async () => {
+    setLoadingDues(true)
+    try {
+      const res = await listMyStudents()
+      setStudentDues(res.data)
+    } catch {
+      // Non-fatal: dues panel simply stays empty
+    } finally {
+      setLoadingDues(false)
+    }
+  }
+
+  const openSubmitForm = (studentName = '', amount = '', dueId = null) => {
+    setForm((f) => ({
+      ...f,
+      student_name: studentName,
+      amount: amount !== '' && amount != null ? String(amount) : '',
+    }))
+    setActiveDueId(dueId)
+    setMessage('')
+    setError('')
+    setShowSubmitForm(true)
+    setTimeout(() => {
+      submitFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+  }
+
   useEffect(() => {
-    if (isParent) loadEntries()
+    if (isParent) {
+      loadEntries()
+      loadStudentDues()
+    }
+  }, [isParent])
+
+  // Auto-refresh so status changes made by an admin (e.g. confirming a
+  // "waiting for confirmation" due as paid) reflect without a manual reload.
+  useEffect(() => {
+    if (!isParent) return undefined
+    const interval = setInterval(() => {
+      loadStudentDues()
+      loadEntries()
+    }, 15000)
+    return () => clearInterval(interval)
   }, [isParent])
 
   const handleSubmit = async (e) => {
@@ -56,10 +102,13 @@ function ParentPaymentPortal() {
       await createPayment({
         ...form,
         amount: parseFloat(form.amount),
+        due_id: activeDueId,
       })
       setMessage('Payment notification sent. Status is pending until the school confirms receipt.')
       setForm((f) => ({ ...f, student_name: '', amount: '' }))
+      setActiveDueId(null)
       await loadEntries()
+      await loadStudentDues()
     } catch (err) {
       setError(err.response?.data?.detail || 'Could not submit payment notification.')
     } finally {
@@ -73,7 +122,7 @@ function ParentPaymentPortal() {
         <div className="bg-white rounded-2xl shadow-lg border border-green-100 p-6 md:p-8">
           <h2 className="text-xl font-bold text-gray-800 mb-2">Notify us about your payment</h2>
           <p className="text-gray-600 text-sm mb-4">
-            After you pay via Venmo or bank transfer, parents can log in and tell us the student name,
+            After you pay via Venmo or Zelle, parents can log in and tell us the student name,
             amount, and payment method. The school will mark it as received once confirmed.
           </p>
           <Link
@@ -89,10 +138,20 @@ function ParentPaymentPortal() {
 
   return (
     <div className="container mx-auto px-4 -mt-8 relative z-10 max-w-4xl space-y-8">
-      <div className="bg-white rounded-2xl shadow-lg border border-green-100 p-6 md:p-8">
-        <h2 className="text-xl font-bold text-gray-800 mb-1">Submit planned payment</h2>
+      {showSubmitForm && (
+      <div ref={submitFormRef} className="bg-white rounded-2xl shadow-lg border border-green-100 p-6 md:p-8">
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-xl font-bold text-gray-800">Submit planned payment</h2>
+          <button
+            type="button"
+            onClick={() => setShowSubmitForm(false)}
+            className="text-sm text-gray-500 font-medium hover:underline"
+          >
+            Hide
+          </button>
+        </div>
         <p className="text-gray-600 text-sm mb-6">
-          Signed in as {user.email}. We&apos;ll email the admin and show status below.
+          Signed in as {user.email}. We'll email the admin and show status below.
         </p>
         <form onSubmit={handleSubmit} className="grid md:grid-cols-2 gap-4">
           <div>
@@ -154,6 +213,7 @@ function ParentPaymentPortal() {
           </div>
         </form>
       </div>
+      )}
 
       <div className="bg-white rounded-2xl shadow-lg p-6 md:p-8">
         <h3 className="text-lg font-bold text-gray-800 mb-4">Your payment entries</h3>
@@ -186,6 +246,109 @@ function ParentPaymentPortal() {
           </ul>
         )}
       </div>
+
+      <div className="bg-white rounded-2xl shadow-lg border border-green-100 p-6 md:p-8">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-lg font-bold text-gray-800">My students & payment due</h3>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={loadStudentDues}
+              className="text-sm text-green-700 font-medium hover:underline"
+            >
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={() => openSubmitForm()}
+              className="px-4 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700"
+            >
+              Submit a payment
+            </button>
+          </div>
+        </div>
+        <p className="text-gray-600 text-sm mb-6">
+          Students linked to your account and the amounts the school has assigned to each.
+        </p>
+
+        {loadingDues ? (
+          <p className="text-gray-500 text-sm">Loading…</p>
+        ) : studentDues.length === 0 ? (
+          <p className="text-gray-500 text-sm">
+            No students are linked to your account yet. Please contact the school.
+          </p>
+        ) : (
+          <div className="space-y-6">
+            {studentDues.map(({ student, dues, total_due, total_paid }) => (
+              <div key={student.id} className="border border-gray-100 rounded-2xl overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50 px-5 py-4">
+                  <div>
+                    <p className="font-semibold text-gray-800">{student.name}</p>
+                    <p className="text-xs text-gray-500 font-mono">ID: {student.student_code}</p>
+                  </div>
+                  <div className="flex gap-6 text-sm">
+                    <div>
+                      <p className="text-gray-500">Total due</p>
+                      <p className="font-bold text-rose-600">${Number(total_due).toFixed(2)}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Total paid</p>
+                      <p className="font-bold text-green-600">${Number(total_paid).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+                {dues.length === 0 ? (
+                  <p className="px-5 py-4 text-sm text-gray-500">No payment dues assigned.</p>
+                ) : (
+                  <ul className="divide-y divide-gray-100">
+                    {dues.map((due) => (
+                      <li key={due.id} className="px-5 py-4 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="font-medium text-gray-800">{due.title}</p>
+                          <p className="text-xs text-gray-400">
+                            {due.due_date
+                              ? `Due ${new Date(due.due_date).toLocaleDateString()}`
+                              : 'No due date'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-gray-800">
+                            ${Number(due.amount).toFixed(2)}
+                          </span>
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              due.status === 'paid'
+                                ? 'bg-green-100 text-green-800'
+                                : due.status === 'waiting_confirmation'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-rose-100 text-rose-800'
+                            }`}
+                          >
+                            {due.status === 'paid'
+                              ? 'Paid'
+                              : due.status === 'waiting_confirmation'
+                              ? 'Waiting for confirmation'
+                              : 'Due'}
+                          </span>
+                          {due.status === 'due' && (
+                            <button
+                              type="button"
+                              onClick={() => openSubmitForm(student.name, due.amount, due.id)}
+                              className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700"
+                            >
+                              Pay
+                            </button>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -202,7 +365,7 @@ export default function Payment() {
             </svg>
           </div>
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Payment Information</h1>
-          <p className="text-green-100 text-lg">Pay via Venmo or bank transfer, then notify the school</p>
+          <p className="text-green-100 text-lg">Pay via Venmo or Zelle, then notify the school</p>
         </div>
       </div>
 
@@ -210,122 +373,53 @@ export default function Payment() {
 
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-4xl mx-auto space-y-8">
-          {/* Venmo Payment */}
-          <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center flex-shrink-0">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Venmo Payment</h2>
-                <p className="text-gray-600">Quick & Easy Mobile Payment</p>
-              </div>
-            </div>
-            
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              <div className="flex-1 w-full">
-                <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 text-center">
-                  <div className="w-48 h-48 bg-white rounded-2xl mx-auto flex items-center justify-center shadow-lg">
-                    <div className="text-center">
-                      <div className="text-5xl mb-2">📱</div>
-                      <p className="text-gray-500 text-sm mb-2">Scan QR Code</p>
-                      <p className="text-2xl font-bold text-blue-600">@EklavyaArt</p>
-                    </div>
-                  </div>
+          {/* Payment QR Codes */}
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Venmo QR */}
+            <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">Venmo QR</h2>
+                  <p className="text-gray-600">Quick & Easy Mobile Payment</p>
                 </div>
               </div>
-              
-              <div className="flex-1">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                      <span className="text-blue-600 text-sm font-bold">1</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-800">Open Venmo App</h3>
-                      <p className="text-gray-600 text-sm">Launch the Venmo app on your phone</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                      <span className="text-blue-600 text-sm font-bold">2</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-800">Scan or Search</h3>
-                      <p className="text-gray-600 text-sm">Scan QR code or search <span className="font-semibold">@EklavyaArt</span></p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                      <span className="text-blue-600 text-sm font-bold">3</span>
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-800">Send Payment</h3>
-                      <p className="text-gray-600 text-sm">Enter amount and include your name</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
 
-          {/* Bank Transfer */}
-          <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center flex-shrink-0">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Bank Transfer Details</h2>
-                <p className="text-gray-600">Direct Bank Account Transfer</p>
-              </div>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Bank Name</p>
-                    <p className="text-lg font-semibold text-gray-800">First National Bank</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Account Name</p>
-                    <p className="text-lg font-semibold text-gray-800">Eklavya Art School</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Account Type</p>
-                    <p className="text-lg font-semibold text-gray-800">Checking</p>
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 text-center">
+                <div className="w-48 h-48 bg-white rounded-2xl mx-auto flex items-center justify-center shadow-lg">
+                  <div className="text-center">
+                    <div className="text-5xl mb-2">📱</div>
+                    <p className="text-gray-500 text-sm mb-2">Scan QR Code</p>
+                    <p className="text-2xl font-bold text-blue-600">@EklavyaArt</p>
                   </div>
                 </div>
               </div>
-              
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6">
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Account Number</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-lg font-mono font-semibold text-gray-800">1234567890</p>
-                      <button className="text-green-600 hover:text-green-700">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Routing Number</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-lg font-mono font-semibold text-gray-800">123456789</p>
-                      <button className="text-green-600 hover:text-green-700">
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                      </button>
-                    </div>
+            </div>
+
+            {/* Zelle QR */}
+            <div className="bg-white rounded-3xl shadow-xl p-8 hover:shadow-2xl transition">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">Zelle QR</h2>
+                  <p className="text-gray-600">Fast & Secure Bank Payment</p>
+                </div>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-8 text-center">
+                <div className="w-48 h-48 bg-white rounded-2xl mx-auto flex items-center justify-center shadow-lg">
+                  <div className="text-center">
+                    <div className="text-5xl mb-2">📲</div>
+                    <p className="text-gray-500 text-sm mb-2">Scan QR Code</p>
+                    <p className="text-2xl font-bold text-purple-600">@EklavyaArt</p>
                   </div>
                 </div>
               </div>
@@ -343,7 +437,7 @@ export default function Payment() {
               <div>
                 <h3 className="font-semibold text-amber-900 mb-2">Important Note</h3>
                 <p className="text-sm text-amber-800">
-                  We do not process payments directly on this website. Use Venmo or bank transfer above,
+                  We do not process payments directly on this website. Use Venmo or Zelle above,
                   then log in as a parent to submit student name, amount, and payment mode. Entries stay
                   pending until an admin marks them received.
                 </p>
