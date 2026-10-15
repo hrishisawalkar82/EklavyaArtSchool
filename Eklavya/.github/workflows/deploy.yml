@@ -1,0 +1,75 @@
+name: Deploy to Azure Web App
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  AZURE_WEBAPP_NAME: eklavya-webapp
+  AZURE_WEBAPP_PACKAGE_PATH: ${{ github.workspace }}/dist
+  FRONTEND_DIR: ${{ github.workspace }}/Eklavya/frontend
+  BACKEND_DIR: ${{ github.workspace }}/Eklavya/backend
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: Eklavya/frontend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: Eklavya/backend/requirements.txt
+
+      - name: Install frontend dependencies
+        run: |
+          cd ${{ env.FRONTEND_DIR }}
+          npm ci
+          npm run build
+
+      - name: Install backend dependencies
+        run: |
+          cd ${{ env.BACKEND_DIR }}
+          pip install -r requirements.txt
+
+      - name: Create deployment package
+        run: |
+          mkdir -p ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+          cp -r ${{ env.BACKEND_DIR }}/* ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/
+          cp -r ${{ env.FRONTEND_DIR }}/dist ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/frontend/
+          cp ${{ env.BACKEND_DIR }}/Dockerfile ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/
+          cp ${{ env.BACKEND_DIR }}/requirements.txt ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+          images: 'python:3.11-slim'
+          start-up-command: 'bash start.sh'
+
+      - name: Upload deployment package artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package
+          path: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}
+          retention-days: 7
