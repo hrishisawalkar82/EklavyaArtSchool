@@ -1,132 +1,140 @@
-# Eklavya Art School Website
+# Eklavya Art School
 
-Full-stack website for Eklavya Art School with React frontend and Python FastAPI backend.
+A full-stack web application for an art school with:
+- **Frontend**: React + Vite + Tailwind CSS
+- **Backend**: FastAPI + PostgreSQL
+- **Storage**: Azure Blob Storage
+- **Email**: Azure Communication Services
 
-## Features
+## Project Structure
 
-- **Home Page**: Hero section, featured artwork, instructor info, and about us
-- **Gallery**: Random art images loaded from Azure Blob Storage
-- **Kids Corner**: Random kids artwork loaded from Azure Blob Storage
-- **Contact**: Contact form with database storage
-- **Payment**: Display Venmo QR code and bank transfer details
-
-## Tech Stack
-
-### Frontend
-- React 18 with Vite
-- React Router for navigation
-- Tailwind CSS for styling
-- Axios for API calls
-
-### Backend
-- Python FastAPI
-- SQLAlchemy with PostgreSQL
-- Azure Blob Storage SDK
-- Pydantic for validation
-
-### Infrastructure
-- Docker & Docker Compose
-- PostgreSQL database
-- Azurite (Azure Storage Emulator)
-
-## Setup Instructions
-
-### Prerequisites
-- Docker & Docker Compose
-- Node.js 18+ (for local development)
-- Python 3.11+ (for local development)
-
-### Quick Start with Docker
-
-1. Clone the repository and navigate to the project:
-```bash
-cd /path/to/Eklavya
+```
+Eklavya/
+├── backend/          # FastAPI backend
+│   ├── app/
+│   │   ├── routes/   # API routes
+│   │   ├── models/   # SQLAlchemy models
+│   │   └── main.py   # FastAPI app entry
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/         # React frontend
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   └── api/
+│   ├── Dockerfile
+│   └── package.json
+├── docker-compose.yml
+└── AZURE_SETUP.md    # Azure configuration guide
 ```
 
-2. Copy environment file:
-```bash
-cp .env.example .env
-```
+## Prerequisites
 
-3. Start all services:
-```bash
-docker-compose up --build
-```
+1. **Azure Account** - Free account available at [azure.microsoft.com](https://azure.microsoft.com)
+2. **Azure CLI** - Install from [docs.microsoft.com/cli](https://docs.microsoft.com/cli)
+3. **GitHub Account** - For CI/CD deployment
 
-4. Access the application:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
+## Quick Start
 
 ### Local Development
 
-#### Backend Setup
 ```bash
-cd backend
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+# Clone the repository
+git clone https://github.com/hrishisawalkar82/EklavyaArtSchool.git
+cd EklavyaArtSchool/Eklavya
+
+# Create .env file from template
+cp .env.example .env
+
+# Start all services
+./start.sh
 ```
 
-#### Frontend Setup
+### Azure Deployment
+
+1. Create Azure resources (App Service, Storage, Database)
+2. Configure environment secrets in GitHub
+3. Push to main branch to trigger deployment
+
+## Azure Resources Required
+
+| Resource | Purpose | Free Tier |
+|----------|---------|-----------|
+| App Service | Hosts the web app | Yes |
+| Storage Account | Blob storage for images | Yes |
+| PostgreSQL | Database | No (paid) |
+| Communication Services | Email | Yes |
+
+## Environment Variables
+
+### Azure Blob Storage
+- `AZURE_STORAGE_CONNECTION_STRING` - Connection string from Azure Storage
+- `AZURE_CONTAINER_GALLERY` - Gallery container name (default: gallery)
+- `AZURE_CONTAINER_KIDS` - Kids container name (default: kids)
+
+### Database
+- `DATABASE_URL` - PostgreSQL connection string
+
+### Authentication
+- `JWT_SECRET` - Secret for JWT token generation
+- `ADMIN_EMAIL` - Admin email
+- `ADMIN_PASSWORD` - Admin password
+
+### Email
+- `AZURE_COMMUNICATION_CONNECTION_STRING` - Azure Communication Services
+- `AZURE_COMMUNICATION_SENDER` - Verified sender email
+
+## GitHub Actions CI/CD
+
+The repository includes GitHub Actions workflows for automated deployment:
+
+- `.github/workflows/deploy.yml` - Deploys to production on main branch
+- `.github/workflows/deploy-staging.yml` - Deploys to staging on develop branch
+
+### Required GitHub Secrets
+
+Configure the following secrets in your GitHub repository:
+
+1. **AZURE_CREDENTIALS** - Azure service principal credentials
+2. **AZURE_CREDENTIALS_STAGING** - Azure service principal for staging
+
+#### Creating Azure Service Principal
+
 ```bash
-cd frontend
-npm install
-npm run dev
+az login
+az ad sp create-for-rbac --name "EklavyaDeploy" --role contributor \
+  --scopes /subscriptions/{subscription-id}/resourceGroups/{resource-group} \
+  --sdk-auth
 ```
 
-## Uploading Images to Azure Blob Storage
+## Deployment Architecture
 
-### Using Azure Storage Explorer (Recommended)
-1. Download [Azure Storage Explorer](https://azure.microsoft.com/en-us/products/storage/storage-explorer/)
-2. Connect to local Azurite:
-   - Connection string: `DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;`
-3. Upload images to `gallery` container for gallery images
-4. Upload images to `kids` container for kids artwork
-
-### Using Azure CLI
-```bash
-# Install Azure CLI
-pip install azure-cli
-
-# Upload to gallery container
-az storage blob upload-batch \
-  --connection-string "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;" \
-  --destination gallery \
-  --source ./your-images-folder
-
-# Upload to kids container
-az storage blob upload-batch \
-  --connection-string "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1;" \
-  --destination kids \
-  --source ./kids-images-folder
+```
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   GitHub     │────▶│  GitHub      │────▶│  Azure       │
+│  Actions     │     │  Environment │     │  App Service │
+└──────────────┘     └──────────────┘     └──────────────┘
+                            │
+                            ▼
+                     ┌──────────────┐
+                     │  Azure Blob  │
+                     │   Storage    │
+                     └──────────────┘
 ```
 
-## Database Schema
+## Troubleshooting
 
-### Contacts Table
-- id: Primary key
-- name: Contact name
-- email: Contact email
-- phone: Phone number (optional)
-- message: Message content
-- created_at: Timestamp
+### Images not loading
+- Verify "Allow Blob public access" is enabled in Azure Storage
+- Check container access policy
 
-## API Endpoints
+### Database connection issues
+- Ensure PostgreSQL is accessible from App Service
+- Check firewall settings
 
-- `GET /api/images/gallery?count=12` - Get random gallery images
-- `GET /api/images/kids?count=12` - Get random kids images
-- `POST /api/contact` - Submit contact form
-
-## Production Deployment
-
-For production, update the following:
-
-1. Replace Azurite with actual Azure Blob Storage
-2. Update connection strings in `.env`
-3. Set up proper PostgreSQL instance
-4. Configure environment-specific variables
-5. Enable HTTPS
-6. Set up proper authentication
+### Email not sending
+- Verify Azure Communication Services is configured
+- Check sender email is verified
 
 ## License
 
