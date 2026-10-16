@@ -11,12 +11,15 @@ from app.seed import seed_default_users
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
     try:
-        seed_default_users(db)
-    finally:
-        db.close()
+        Base.metadata.create_all(bind=engine)
+        db = SessionLocal()
+        try:
+            seed_default_users(db)
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Warning: DB initialization failed at startup: {e}")
     yield
 
 

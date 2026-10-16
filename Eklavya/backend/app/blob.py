@@ -6,20 +6,30 @@ CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 GALLERY_CONTAINER = os.getenv("AZURE_CONTAINER_GALLERY", "gallery")
 KIDS_CONTAINER = os.getenv("AZURE_CONTAINER_KIDS", "kids")
 
-blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
+_blob_service_client = None
+
+def get_blob_service_client():
+    global _blob_service_client
+    if _blob_service_client is None:
+        if not CONNECTION_STRING:
+            raise ValueError("AZURE_STORAGE_CONNECTION_STRING is not set")
+        _blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
+    return _blob_service_client
 
 def ensure_containers():
+    client = get_blob_service_client()
     try:
-        blob_service_client.create_container(GALLERY_CONTAINER)
+        client.create_container(GALLERY_CONTAINER)
     except:
         pass
     try:
-        blob_service_client.create_container(KIDS_CONTAINER)
+        client.create_container(KIDS_CONTAINER)
     except:
         pass
 
 def get_random_images(container_name: str, count: int = 12):
-    container_client = blob_service_client.get_container_client(container_name)
+    client = get_blob_service_client()
+    container_client = client.get_container_client(container_name)
     
     try:
         blobs = list(container_client.list_blobs())

@@ -5,7 +5,10 @@ router = APIRouter()
 
 @router.on_event("startup")
 def startup():
-    ensure_containers()
+    try:
+        ensure_containers()
+    except Exception as e:
+        print(f"Warning: ensure_containers failed at startup: {e}")
 
 @router.get("/images/gallery")
 def get_gallery_images(count: int = 12):
