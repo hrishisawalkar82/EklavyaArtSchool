@@ -1,6 +1,7 @@
 import logging
 import os
 import smtplib
+import threading
 from email.message import EmailMessage
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,9 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER or "noreply@eklavyaart.com")
+
+# Email send timeout in seconds (prevents hanging on slow/unresponsive email services)
+EMAIL_SEND_TIMEOUT = int(os.getenv("EMAIL_SEND_TIMEOUT", "10"))
 
 
 def _send_via_azure(subject: str, body: str, to_address: str) -> bool:
@@ -42,7 +46,8 @@ def _send_via_azure(subject: str, body: str, to_address: str) -> bool:
         }
 
         poller = client.begin_send(message)
-        result = poller.result()
+        # Use a timeout to prevent hanging indefinitely on slow email service
+        result = poller.result(timeout=EMAIL_SEND_TIMEOUT)
         logger.info("Azure email sent to %s (status=%s, id=%s)", to_address, result.get("status"), result.get("id"))
         return True
     except Exception as e:
@@ -62,7 +67,7 @@ def _send_via_smtp(subject: str, body: str, to_address: str) -> bool:
     msg.set_content(body)
 
     try:
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30) as server:
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=EMAIL_SEND_TIMEOUT) as server:
             server.starttls()
             if SMTP_USER and SMTP_PASSWORD:
                 server.login(SMTP_USER, SMTP_PASSWORD)
@@ -97,6 +102,16 @@ def send_email(subject: str, body: str, to_address: str) -> bool:
         body,
     )
     return False
+
+
+def send_email_async(subject: str, body: str, to_address: str) -> None:
+    """Send an email in a background thread so it never blocks the request."""
+    thread = threading.Thread(
+        target=send_email,
+        args=(subject, body, to_address),
+        daemon=True,
+    )
+    thread.start()
 
 
 def notify_admin_new_payment(

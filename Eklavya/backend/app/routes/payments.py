@@ -2,13 +2,13 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List, Literal, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.auth import require_admin, require_parent
 from app.db import get_db
-from app.email_service import notify_admin_new_payment
+from app.email_service import send_email_async, ADMIN_NOTIFICATION_EMAIL
 from app.models.payment import PaymentSubmission
 from app.models.payment_due import PaymentDue
 from app.models.user import User
@@ -45,6 +45,7 @@ class PaymentOut(BaseModel):
 @router.post("/payments", response_model=PaymentOut)
 def create_payment(
     body: PaymentCreate,
+    background_tasks: BackgroundTasks,
     user: User = Depends(require_parent),
     db: Session = Depends(get_db),
 ):
@@ -61,12 +62,21 @@ def create_payment(
     db.commit()
     db.refresh(payment)
 
-    notify_admin_new_payment(
-        student_name=payment.student_name,
-        parent_name=payment.parent_name,
-        amount=f"{payment.amount:.2f}",
-        payment_mode=payment.payment_mode,
-        submission_id=payment.id,
+    # Send admin notification email in background so it never blocks the request
+    background_tasks.add_task(
+        send_email_async,
+        subject=f"[Eklavya] New payment notification #{payment.id}",
+        body=(
+            f"A parent submitted a planned payment.\n\n"
+            f"Submission ID: {payment.id}\n"
+            f"Student: {payment.student_name}\n"
+            f"Parent: {payment.parent_name}\n"
+            f"Amount: ${payment.amount:.2f}\n"
+            f"Payment mode: {payment.payment_mode}\n"
+            f"Status: pending\n\n"
+            f"Log in as admin to mark it as received."
+        ),
+        to_address=ADMIN_NOTIFICATION_EMAIL,
     )
 
     # If this notification is for a specific assigned due, move it to
