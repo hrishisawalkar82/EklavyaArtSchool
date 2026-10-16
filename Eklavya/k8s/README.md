@@ -204,6 +204,79 @@ env:
 
 Or if using the ingress path-based routing, keep it as `http://backend:8000` since the frontend and backend are in the same cluster.
 
+## How GitHub Actions Connects to Your AKS Cluster
+
+GitHub Actions connects to your Azure AKS cluster using an **Azure Service Principal** with the `azure/login` action. Here's the complete flow:
+
+### Connection Flow
+
+```
+GitHub Actions → Azure Login (Service Principal) → AKS Credentials → kubectl → AKS Cluster
+```
+
+### Step 1: Create Azure Service Principal
+
+Run this command to create a service principal that GitHub Actions will use:
+
+```bash
+az login
+az ad sp create-for-rbac --name "EklavyaGitHubDeploy" --role contributor \
+  --scopes /subscriptions/{subscription-id}/resourceGroups/EklavyaRG \
+  --sdk-auth
+```
+
+This outputs JSON like:
+```json
+{
+  "clientId": "your-client-id",
+  "clientSecret": "your-client-secret",
+  "subscriptionId": "your-subscription-id",
+  "tenantId": "your-tenant-id",
+  ...
+}
+```
+
+### Step 2: Add GitHub Secrets
+
+Go to your GitHub repository → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**:
+
+| Secret Name | Value |
+|-------------|-------|
+| `AZURE_CREDENTIALS` | The full JSON output from the service principal command above |
+| `AZURE_SUBSCRIPTION_ID` | Your Azure subscription ID (from the JSON output) |
+
+### Step 3: How the Workflow Uses These Secrets
+
+In `.github/workflows/deploy.yml`:
+
+1. **`azure/login@v1`** uses `AZURE_CREDENTIALS` to authenticate with Azure
+2. **`az aks get-credentials`** fetches the kubeconfig for your AKS cluster
+3. **`kubectl`** commands use that kubeconfig to deploy to the cluster
+
+### Step 4: Required Azure Permissions
+
+The service principal needs these permissions on your resource group:
+- **Contributor** role on the resource group (EklavyaRG)
+- This allows it to: read AKS credentials, manage ACR, deploy to AKS
+
+### Alternative: OpenID Connect (OIDC) - More Secure
+
+Instead of a service principal secret, you can use OIDC for passwordless authentication:
+
+1. Enable OIDC in your Azure subscription
+2. Create a federated identity credential
+3. Update the workflow to use `azure/login` with `client-id`, `tenant-id`, and `subscription-id` instead of `creds`
+
+### Troubleshooting Connection Issues
+
+| Issue | Solution |
+|-------|----------|
+| `AZURE_CREDENTIALS` not found | Add the secret in GitHub repo settings |
+| `AKS cluster not found` | Verify `RESOURCE_GROUP` and `CLUSTER_NAME` in workflow |
+| `kubectl: command not found` | The workflow installs kubectl via Azure CLI |
+| `Permission denied` | Ensure service principal has Contributor role on the RG |
+| `ACR login failed` | Ensure service principal has AcrPull role on ACR |
+
 ## Notes
 
 - No PostgreSQL or Azurite pods are deployed - these are Azure managed services external to the cluster
