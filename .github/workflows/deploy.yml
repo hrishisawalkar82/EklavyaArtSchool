@@ -5,17 +5,17 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-env:
-  RESOURCE_GROUP: EklavyaRG
-  CLUSTER_NAME: EklavyaAKS
-  ACR_NAME: eklavyacr
-  NAMESPACE: eklavya
-  BACKEND_IMAGE: eklavyacr.azurecr.io/eklavya-backend
-  FRONTEND_IMAGE: eklavyacr.azurecr.io/eklavya-frontend
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: staging
+    env:
+      RESOURCE_GROUP: ${{ vars.RESOURCE_GROUP }}
+      CLUSTER_NAME: ${{ vars.CLUSTER_NAME }}
+      ACR_NAME: ${{ vars.ACR_NAME }}
+      NAMESPACE: ${{ vars.NAMESPACE }}
+      BACKEND_IMAGE: ${{ vars.ACR_NAME }}.azurecr.io/eklavya-backend
+      FRONTEND_IMAGE: ${{ vars.ACR_NAME }}.azurecr.io/eklavya-frontend
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
