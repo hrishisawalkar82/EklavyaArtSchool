@@ -10,8 +10,8 @@ env:
   CLUSTER_NAME: EklavyaAKS
   ACR_NAME: eklavyacr
   NAMESPACE: eklavya
-  BACKEND_IMAGE: ${{ env.ACR_NAME }}.azurecr.io/eklavya-backend
-  FRONTEND_IMAGE: ${{ env.ACR_NAME }}.azurecr.io/eklavya-frontend
+  BACKEND_IMAGE: eklavyacr.azurecr.io/eklavya-backend
+  FRONTEND_IMAGE: eklavyacr.azurecr.io/eklavya-frontend
 
 jobs:
   deploy:
@@ -95,10 +95,3 @@ jobs:
           kubectl get pods -n ${{ env.NAMESPACE }}
           kubectl get services -n ${{ env.NAMESPACE }}
           kubectl get ingress -n ${{ env.NAMESPACE }}
-</write_to_file>
-</execute_command>
-<execute_command>
-<command>rm /Users/hrishikeshsawalkar/GitProjects/EklavyaArtSchool/.github/deploy.yml
-</execute_command>
-<requires_approval>false</requires_approval>
-</execute_command>
