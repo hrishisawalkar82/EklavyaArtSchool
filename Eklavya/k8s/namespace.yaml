@@ -2,13 +2,3 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: eklavya
-</write_to_file>
-</execute_command>
-<write_to_file>
-<path>Eklavya/k8s/namespace.yaml</path>
-<content>
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: eklavya
-</write_to_file>
