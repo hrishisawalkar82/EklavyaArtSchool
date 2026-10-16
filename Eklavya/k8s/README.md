@@ -29,8 +29,8 @@ az group create --name EklavyaRG --location eastus
 
 # Create AKS cluster
 az aks create \
-  --resource-group EklavyaRG \
-  --name EklavyaAKS \
+  --resource-group JARVIS \
+  --name jarvis \
   --node-count 2 \
   --enable-addons ingress-appgw \
   --generate-ssh-keys

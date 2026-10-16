@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 env:
-  RESOURCE_GROUP: EklavyaRG
-  CLUSTER_NAME: EklavyaAKS
+  RESOURCE_GROUP: JARVIS
+  CLUSTER_NAME: jarvis
   ACR_NAME: eklavyacr
   NAMESPACE: eklavya
   BACKEND_IMAGE: ${{ env.ACR_NAME }}.azurecr.io/eklavya-backend
