@@ -1,0 +1,103 @@
+name: Deploy to Azure AKS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  RESOURCE_GROUP: EklavyaRG
+  CLUSTER_NAME: EklavyaAKS
+  ACR_NAME: eklavyacr
+  NAMESPACE: eklavya
+  BACKEND_IMAGE: ${{ env.ACR_NAME }}.azurecr.io/eklavya-backend
+  FRONTEND_IMAGE: ${{ env.ACR_NAME }}.azurecr.io/eklavya-frontend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set Azure subscription
+        run: |
+          az account set --subscription ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get AKS credentials
+        run: |
+          az aks get-credentials \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CLUSTER_NAME }} \
+            --overwrite-existing
+
+      - name: Login to ACR
+        run: |
+          az acr login --name ${{ env.ACR_NAME }}
+
+      - name: Build and push backend image
+        run: |
+          docker build -t ${{ env.BACKEND_IMAGE }}:${{ github.sha }} ./backend
+          docker build -t ${{ env.BACKEND_IMAGE }}:latest ./backend
+          docker push ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.BACKEND_IMAGE }}:latest
+
+      - name: Build and push frontend image
+        run: |
+          docker build -t ${{ env.FRONTEND_IMAGE }}:${{ github.sha }} ./frontend
+          docker build -t ${{ env.FRONTEND_IMAGE }}:latest ./frontend
+          docker push ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          docker push ${{ env.FRONTEND_IMAGE }}:latest
+
+      - name: Create namespace
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+
+      - name: Create/update secrets
+        run: |
+          kubectl create secret generic eklavya-secrets \
+            --from-literal=database-url="${{ secrets.DATABASE_URL }}" \
+            --from-literal=azure-storage-connection-string="${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}" \
+            --from-literal=jwt-secret="${{ secrets.JWT_SECRET }}" \
+            --from-literal=admin-password="${{ secrets.ADMIN_PASSWORD }}" \
+            --from-literal=azure-communication-connection-string="${{ secrets.AZURE_COMMUNICATION_CONNECTION_STRING }}" \
+            --from-literal=azure-communication-sender="${{ secrets.AZURE_COMMUNICATION_SENDER }}" \
+            --from-literal=smtp-host="${{ secrets.SMTP_HOST }}" \
+            --from-literal=smtp-user="${{ secrets.SMTP_USER }}" \
+            --from-literal=smtp-password="${{ secrets.SMTP_PASSWORD }}" \
+            --from-literal=smtp-from="${{ secrets.SMTP_FROM }}" \
+            --dry-run=client -o yaml | kubectl apply -f - -n ${{ env.NAMESPACE }}
+
+      - name: Update image tags in deployment manifests
+        run: |
+          sed -i "s|eklavya-backend:latest|${{ env.BACKEND_IMAGE }}:${{ github.sha }}|g" k8s/backend-deployment.yaml
+          sed -i "s|eklavya-frontend:latest|${{ env.FRONTEND_IMAGE }}:${{ github.sha }}|g" k8s/frontend-deployment.yaml
+
+      - name: Deploy backend
+        run: |
+          kubectl apply -f k8s/backend-deployment.yaml -n ${{ env.NAMESPACE }}
+
+      - name: Deploy frontend
+        run: |
+          kubectl apply -f k8s/frontend-deployment.yaml -n ${{ env.NAMESPACE }}
+
+      - name: Apply ingress
+        run: |
+          kubectl apply -f k8s/ingress.yaml -n ${{ env.NAMESPACE }}
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n ${{ env.NAMESPACE }}
+          kubectl get services -n ${{ env.NAMESPACE }}
+          kubectl get ingress -n ${{ env.NAMESPACE }}
+</write_to_file>
+</execute_command>
+<execute_command>
+<command>ls -la Eklavya/.github/workflows/</command>
+<requires_approval>false</requires_approval>
+</execute_command>
