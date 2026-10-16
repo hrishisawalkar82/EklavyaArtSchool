@@ -11,10 +11,13 @@ from app.seed import seed_default_users
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Create tables and seed default users (idempotent)
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         seed_default_users(db)
+    except Exception as e:
+        logging.warning(f"Seed failed (will retry on next request): {e}")
     finally:
         db.close()
     yield
